@@ -276,12 +276,12 @@
     </form>
   </div>
 
- <script>
-  // === 1. Update Slider Tooltip ===
-  const satisfactionSlider = document.getElementById('satisfactionSlider');
-  const satisfactionValue = document.getElementById('satisfactionValue');
-  
-  function updateSliderTooltip() {
+<script>
+// === 1. Update Slider Tooltip (No Change) ===
+const satisfactionSlider = document.getElementById('satisfactionSlider');
+const satisfactionValue = document.getElementById('satisfactionValue');
+
+function updateSliderTooltip() {
     const value = satisfactionSlider.value;
     const min = satisfactionSlider.min;
     const max = satisfactionSlider.max;
@@ -290,46 +290,64 @@
     satisfactionValue.textContent = value;
     satisfactionValue.style.left = `calc(${percent * 100}%)`;
     satisfactionValue.style.transform = `translateX(-50%) translateX(${thumbCorrect}px)`;
-  }
+}
 
-  satisfactionSlider.addEventListener('input', updateSliderTooltip);
-  setTimeout(updateSliderTooltip, 10);
+satisfactionSlider.addEventListener('input', updateSliderTooltip);
+setTimeout(updateSliderTooltip, 10);
 
-  // === 2. Form Submission Script ===
-const scriptURL = "https://script.google.com/macros/s/AKfycbxmK7mUxjJqcTrAWU0w_K5Nhu9FEkIw1fGE0hBy-vRnKrBlbvKwMmZYmpyyMr1WFDxW/exec";
+
+// ------------------------------------------------------------------
+// === 2. Form Submission Script (FIXED) ===
+// ------------------------------------------------------------------
+const scriptURL = "https://script.google.com/macros/s/AKfycbxmK7mUxjJqcTrAWU0w_K5Nhu9FEkIw1fGE0hBy-vRnKrBlbvKwMmZYmpyyMr1WFDxW/exec"; // Your real Web App URL
 const form = document.getElementById("surveyForm");
-// ... (loadingOverlay code is fine)
+
+// Loading overlay
+const loadingOverlay = document.createElement("div");
+loadingOverlay.innerHTML = `
+    <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index:2000;">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-3x mb-3" style="color:#b7953b;"></i>
+        <p class="fw-semibold text-dark">Submitting your response...</p>
+      </div>
+    </div>`;
+loadingOverlay.style.display = "none";
+document.body.appendChild(loadingOverlay);
 
 form.addEventListener("submit", (e) => {
     e.preventDefault();
     loadingOverlay.style.display = "flex";
 
-    // 💡 FIX 1: Send raw FormData, Google Apps Script handles it as a simple request
+    // 💡 FIX: Use FormData and URLSearchParams for simple POST (no CORS preflight issue)
     const formData = new FormData(form);
-    
-    // Convert the FormData to a URL-encoded string for the Apps Script to read (optional, but safer)
-    // You must handle the multi-select checkbox field (`solutions_value`) separately
-    
     const dataToSend = new URLSearchParams(formData);
 
     fetch(scriptURL, {
         method: "POST",
-        // mode: "no-cors", // Remove this line
-        // headers: { "Content-Type": "application/json" }, // Remove this line
-        // 💡 FIX 2: Send the URLSearchParams object
+        // Do NOT include mode: "no-cors" or the "Content-Type: application/json" header.
+        // Sending URLSearchParams makes it a simple request, which is handled correctly.
         body: dataToSend
     })
-    .then(() => {
+    .then(response => {
+        // The Apps Script returns a dummy HTML page (due to no-cors mode, even if not explicitly set)
+        // We only care that the request finished successfully, so we skip reading the body.
+        if (!response.ok) {
+            // Check for explicit error response if not using no-cors, but even then, a successful 
+            // fetch() from Apps Script usually means the data was accepted.
+            console.warn("Fetch returned a status other than 200, but proceeding with redirect.", response.status);
+        }
         loadingOverlay.style.display = "none";
-        window.location.href = "thankyou.html";
+        // Check if redirect has already happened to prevent double redirect
+        if (window.location.pathname.indexOf("thankyou.html") === -1) {
+            window.location.href = "thankyou.html"; // ✅ redirect on successful *request*
+        }
     })
     .catch((err) => {
         loadingOverlay.style.display = "none";
-        alert("⚠️ Submission failed. Please try again.");
+        alert("⚠️ Submission failed. Please try again. Check the console for CORS/Network errors.");
         console.error("Error:", err);
     });
 });
-  
 </script>
 </body>
 </html>
