@@ -274,81 +274,94 @@
     </form>
   </div>
 
-  <script>
-    // === 1. Update Slider Tooltip ===
-    const satisfactionSlider = document.getElementById('satisfactionSlider');
-    const satisfactionValue = document.getElementById('satisfactionValue');
-    
-    function updateSliderTooltip() {
-      const value = satisfactionSlider.value;
-      const min = satisfactionSlider.min;
-      const max = satisfactionSlider.max;
-      // Calculate percentage position (0.0 to 1.0)
-      const percent = (value - min) / (max - min); 
-      
-      // This is a "fudge factor" to center the tooltip over the slider thumb.
-      // It adjusts the tooltip left/right at the ends of the slider.
-      // (0.5 - percent) ranges from +0.5 (at start) to -0.5 (at end)
-      // We multiply by a pixel value (e.g., -24px) to get the offset.
-      const thumbCorrect = (0.5 - percent) * -24; 
-      
-      satisfactionValue.textContent = value;
-      satisfactionValue.style.left = `calc(${percent * 100}%)`;
-      satisfactionValue.style.transform = `translateX(-50%) translateX(${thumbCorrect}px)`;
+ <script>
+  // === 1. Update Slider Tooltip ===
+  const satisfactionSlider = document.getElementById('satisfactionSlider');
+  const satisfactionValue = document.getElementById('satisfactionValue');
+  
+  function updateSliderTooltip() {
+    const value = satisfactionSlider.value;
+    const min = satisfactionSlider.min;
+    const max = satisfactionSlider.max;
+    const percent = (value - min) / (max - min); 
+    const thumbCorrect = (0.5 - percent) * -24; 
+    satisfactionValue.textContent = value;
+    satisfactionValue.style.left = `calc(${percent * 100}%)`;
+    satisfactionValue.style.transform = `translateX(-50%) translateX(${thumbCorrect}px)`;
+  }
+
+  satisfactionSlider.addEventListener('input', updateSliderTooltip);
+  setTimeout(updateSliderTooltip, 10);
+
+
+  // === 2. Form Submission Script ===
+  const scriptURL = "https://script.google.com/macros/s/AKfycb.../exec"; // 🔗 Replace with your Apps Script Web App URL
+
+  const form = document.getElementById('surveyForm');
+  const successMsg = document.getElementById('successMsg');
+
+  // Create a loading overlay (hidden by default)
+  const loadingOverlay = document.createElement('div');
+  loadingOverlay.innerHTML = `
+    <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 2000;">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin fa-3x mb-3" style="color: #b7953b;"></i>
+        <p class="fw-semibold text-dark">Submitting your response...</p>
+      </div>
+    </div>`;
+  loadingOverlay.style.display = 'none';
+  document.body.appendChild(loadingOverlay);
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    loadingOverlay.style.display = 'flex'; // Show loader
+
+    const formData = new FormData(form);
+    const data = {};
+
+    formData.forEach((value, key) => {
+      if (data[key]) {
+        if (!Array.isArray(data[key])) {
+          data[key] = [data[key]];
+        }
+        data[key].push(value);
+      } else {
+        data[key] = value;
+      }
+    });
+
+    if (!data.solutions_value) {
+      data.solutions_value = [];
     }
 
-    // Add event listener for real-time updates
-    satisfactionSlider.addEventListener('input', updateSliderTooltip);
-    
-    // Run once on page load to set the initial position for the value '3'
-    // We run it inside a small timeout to ensure the browser has rendered the element
-    // and we can calculate its position correctly.
-    setTimeout(updateSliderTooltip, 10);
-    
-
-    // === 2. Form Submission Script ===
-    
-    // ⬇️ *** PASTE YOUR GOOGLE APPS SCRIPT URL HERE *** ⬇️
-    const scriptURL = "https://script.google.com/macros/s/AKfycb.../exec"; // ❗️ REPLACE THIS
-    
-    const form = document.getElementById('surveyForm');
-    const successMsg = document.getElementById('successMsg');
-
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      
-      const formData = new FormData(form);
-      const data = {};
-
-      formData.forEach((value, key) => {
-        if (data[key]) {
-          if (!Array.isArray(data[key])) {
-            data[key] = [data[key]];
-          }
-          data[key].push(value);
+    fetch(scriptURL, {
+      method: 'POST',
+      mode: 'cors', // ✅ allow response access
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+    .then(async res => {
+      loadingOverlay.style.display = 'none';
+      // If Apps Script doesn't return CORS headers, fallback to redirect
+      try {
+        const json = await res.json();
+        if (json.result === "success") {
+          window.location.href = "thankyou.html";
         } else {
-          data[key] = value;
+          alert("⚠️ Error: " + json.message);
         }
-      });
-      
-      if (!data.solutions_value) {
-        data.solutions_value = [];
+      } catch {
+        // If parsing fails (common when using no-cors), still redirect
+        window.location.href = "thankyou.html";
       }
-
-      fetch(scriptURL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      }).then(() => {
-        successMsg.classList.remove('d-none');
-        form.reset();
-        // Reset slider text and position
-        satisfactionSlider.value = 3; 
-        updateSliderTooltip(); 
-        setTimeout(() => successMsg.classList.add('d-none'), 5000);
-      }).catch(err => console.error('Error!', err.message));
+    })
+    .catch(err => {
+      loadingOverlay.style.display = 'none';
+      console.error('Error!', err.message);
+      alert('⚠️ Submission failed. Please try again.');
     });
-  </script>
+  });
+</script>
 </body>
 </html>
