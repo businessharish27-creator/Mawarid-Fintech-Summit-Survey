@@ -295,72 +295,55 @@
 
 
   // === 2. Form Submission Script ===
-  const scriptURL = "https://script.google.com/macros/s/AKfycb.../exec"; // 🔗 Replace with your Apps Script Web App URL
+  const scriptURL = "https://script.google.com/macros/s/AKfycbXXXXXXXXXXXXXXX/exec"; // 🔗 Replace with your real Web App URL
+  const form = document.getElementById("surveyForm");
 
-  const form = document.getElementById('surveyForm');
-  const successMsg = document.getElementById('successMsg');
-
-  // Create a loading overlay (hidden by default)
-  const loadingOverlay = document.createElement('div');
+  // Loading overlay
+  const loadingOverlay = document.createElement("div");
   loadingOverlay.innerHTML = `
-    <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index: 2000;">
+    <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index:2000;">
       <div class="text-center">
-        <i class="fas fa-spinner fa-spin fa-3x mb-3" style="color: #b7953b;"></i>
+        <i class="fas fa-spinner fa-spin fa-3x mb-3" style="color:#b7953b;"></i>
         <p class="fw-semibold text-dark">Submitting your response...</p>
       </div>
     </div>`;
-  loadingOverlay.style.display = 'none';
+  loadingOverlay.style.display = "none";
   document.body.appendChild(loadingOverlay);
 
-  form.addEventListener('submit', e => {
+  form.addEventListener("submit", (e) => {
     e.preventDefault();
-
-    loadingOverlay.style.display = 'flex'; // Show loader
+    loadingOverlay.style.display = "flex";
 
     const formData = new FormData(form);
     const data = {};
-
-    formData.forEach((value, key) => {
-      if (data[key]) {
-        if (!Array.isArray(data[key])) {
-          data[key] = [data[key]];
-        }
-        data[key].push(value);
-      } else {
-        data[key] = value;
-      }
+    formData.forEach((v, k) => {
+      if (data[k]) {
+        if (!Array.isArray(data[k])) data[k] = [data[k]];
+        data[k].push(v);
+      } else data[k] = v;
     });
 
-    if (!data.solutions_value) {
-      data.solutions_value = [];
-    }
+    if (!data.solutions_value) data.solutions_value = [];
 
     fetch(scriptURL, {
-      method: 'POST',
-      mode: 'cors', // ✅ allow response access
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data)
     })
-    .then(async res => {
-      loadingOverlay.style.display = 'none';
-      // If Apps Script doesn't return CORS headers, fallback to redirect
-      try {
-        const json = await res.json();
-        if (json.result === "success") {
+      .then((res) => res.json())
+      .then((res) => {
+        loadingOverlay.style.display = "none";
+        if (res.result === "success") {
           window.location.href = "thankyou.html";
         } else {
-          alert("⚠️ Error: " + json.message);
+          alert("⚠️ Error: " + res.message);
         }
-      } catch {
-        // If parsing fails (common when using no-cors), still redirect
-        window.location.href = "thankyou.html";
-      }
-    })
-    .catch(err => {
-      loadingOverlay.style.display = 'none';
-      console.error('Error!', err.message);
-      alert('⚠️ Submission failed. Please try again.');
-    });
+      })
+      .catch((err) => {
+        loadingOverlay.style.display = "none";
+        alert("⚠️ Submission failed. Please try again.");
+        console.error("Error:", err);
+      });
   });
 </script>
 </body>
