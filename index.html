@@ -326,24 +326,21 @@
     if (!data.solutions_value) data.solutions_value = [];
 
     fetch(scriptURL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        loadingOverlay.style.display = "none";
-        if (res.result === "success") {
-          window.location.href = "thankyou.html";
-        } else {
-          alert("⚠️ Error: " + res.message);
-        }
-      })
-      .catch((err) => {
-        loadingOverlay.style.display = "none";
-        alert("⚠️ Submission failed. Please try again.");
-        console.error("Error:", err);
-      });
+  method: "POST",
+  mode: "no-cors", // ✅ important
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(data)
+})
+  .then(() => {
+    loadingOverlay.style.display = "none";
+    window.location.href = "thankyou.html"; // ✅ redirect directly
+  })
+  .catch((err) => {
+    loadingOverlay.style.display = "none";
+    alert("⚠️ Submission failed. Please try again.");
+    console.error("Error:", err);
+  });
+
   });
 </script>
 </body>
