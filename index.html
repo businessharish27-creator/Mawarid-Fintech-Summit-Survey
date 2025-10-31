@@ -295,55 +295,41 @@
   satisfactionSlider.addEventListener('input', updateSliderTooltip);
   setTimeout(updateSliderTooltip, 10);
 
-
   // === 2. Form Submission Script ===
-  const scriptURL = "https://script.google.com/macros/s/AKfycbxmK7mUxjJqcTrAWU0w_K5Nhu9FEkIw1fGE0hBy-vRnKrBlbvKwMmZYmpyyMr1WFDxW/exec"; // 🔗 Replace with your real Web App URL
-  const form = document.getElementById("surveyForm");
+const scriptURL = "https://script.google.com/macros/s/AKfycbxmK7mUxjJqcTrAWU0w_K5Nhu9FEkIw1fGE0hBy-vRnKrBlbvKwMmZYmpyyMr1WFDxW/exec";
+const form = document.getElementById("surveyForm");
+// ... (loadingOverlay code is fine)
 
-  // Loading overlay
-  const loadingOverlay = document.createElement("div");
-  loadingOverlay.innerHTML = `
-    <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75" style="z-index:2000;">
-      <div class="text-center">
-        <i class="fas fa-spinner fa-spin fa-3x mb-3" style="color:#b7953b;"></i>
-        <p class="fw-semibold text-dark">Submitting your response...</p>
-      </div>
-    </div>`;
-  loadingOverlay.style.display = "none";
-  document.body.appendChild(loadingOverlay);
-
-  form.addEventListener("submit", (e) => {
+form.addEventListener("submit", (e) => {
     e.preventDefault();
     loadingOverlay.style.display = "flex";
 
+    // 💡 FIX 1: Send raw FormData, Google Apps Script handles it as a simple request
     const formData = new FormData(form);
-    const data = {};
-    formData.forEach((v, k) => {
-      if (data[k]) {
-        if (!Array.isArray(data[k])) data[k] = [data[k]];
-        data[k].push(v);
-      } else data[k] = v;
-    });
-
-    if (!data.solutions_value) data.solutions_value = [];
+    
+    // Convert the FormData to a URL-encoded string for the Apps Script to read (optional, but safer)
+    // You must handle the multi-select checkbox field (`solutions_value`) separately
+    
+    const dataToSend = new URLSearchParams(formData);
 
     fetch(scriptURL, {
-  method: "POST",
-  mode: "no-cors", // ✅ important
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(data)
-})
-  .then(() => {
-    loadingOverlay.style.display = "none";
-    window.location.href = "thankyou.html"; // ✅ redirect directly
-  })
-  .catch((err) => {
-    loadingOverlay.style.display = "none";
-    alert("⚠️ Submission failed. Please try again.");
-    console.error("Error:", err);
-  });
-
-  });
+        method: "POST",
+        // mode: "no-cors", // Remove this line
+        // headers: { "Content-Type": "application/json" }, // Remove this line
+        // 💡 FIX 2: Send the URLSearchParams object
+        body: dataToSend
+    })
+    .then(() => {
+        loadingOverlay.style.display = "none";
+        window.location.href = "thankyou.html";
+    })
+    .catch((err) => {
+        loadingOverlay.style.display = "none";
+        alert("⚠️ Submission failed. Please try again.");
+        console.error("Error:", err);
+    });
+});
+  
 </script>
 </body>
 </html>
