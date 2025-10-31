@@ -7,14 +7,19 @@
   
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
   
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLMD/CDQ/0E1y3JgJgYfA6J9c0k+oT3T+3Q7tQzH1G4B7b1aF+I0S2IqK/y6I/YkG+" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <style>
-    /* ... (Existing CSS Styles for layout, colors, etc., are kept here) ... */
     body {
+      /* This now uses Bootstrap's default font-family: */
+      
+      /* Grid background similar to the image */
       background-color: #fafafa;
       background-image: 
         linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px);
       background-size: 20px 20px;
+      
       display: flex;
       justify-content: center;
       align-items: center;
@@ -53,6 +58,8 @@
       border: none;
       font-size: 1rem;
       font-weight: 600;
+      /* Ensure the button height doesn't change when spinner is active */
+      position: relative; 
     }
     .submit-btn:hover { 
       background: #9b7c2c; 
@@ -64,6 +71,8 @@
       margin-top: 0.5rem;
     }
     
+    /* === Slider Tooltip Styles (Kept as is) === */
+
     .slider-container {
       position: relative;
       padding-top: 30px; 
@@ -74,7 +83,6 @@
       position: absolute;
       top: 45%; 
       left: 50%; 
-      
       background-color: #b7953b; 
       color: white;
       padding: 4px 8px;
@@ -82,7 +90,6 @@
       font-size: 0.9rem;
       font-weight: 600;
       white-space: nowrap;
-      
       opacity: 0;
       transition: opacity 0.2s ease-in-out;
       pointer-events: none; 
@@ -104,6 +111,15 @@
     #satisfactionSlider:focus + .slider-tooltip {
       opacity: 1;
     }
+
+    /* NEW: Style for the gold spinner */
+    .submit-btn .spinner-border {
+      width: 1.2rem;
+      height: 1.2rem;
+      margin-right: 0.5rem;
+      color: white; /* Spinner inherits text color */
+    }
+    
   </style>
 </head>
 <body class="bg-light">
@@ -136,7 +152,6 @@
       <div class="mb-4">
         <label for="trends" class="form-label">Which emerging fintech trends presented at the summit do you find most promising?</label>
         <textarea class="form-control" id="trends" name="trends" rows="3" placeholder="Your answer"></textarea>
-        <div class="invalid-feedback">This field is required.</div>
       </div>
 
       <div class="mb-4">
@@ -241,6 +256,7 @@
       <div class="mb-4">
         <label for="name" class="form-label">Your full name</label>
         <input type="text" class="form-control" id="name" name="name" placeholder="Your Answer" required>
+        <div class="invalid-feedback">Please enter your name.</div>
       </div>
 
       <div class="mb-4">
@@ -251,11 +267,15 @@
       <div class="mb-4">
         <label for="email" class="form-label">Preferred email for follow-up on collaborations</label>
         <input type="email" class="form-control" id="email" name="email" placeholder="Your Answer" required>
+        <div class="invalid-feedback">Please enter a valid email.</div>
       </div>
 
-      <button type="submit" class="btn submit-btn w-100 p-2 mt-3">Submit</button>
+      <button type="submit" class="btn submit-btn w-100 p-2 mt-3" id="submitButton">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+        <span id="buttonText">Submit</span>
+      </button>
       
-          </form>
+          </form>
   </div>
 
   <script>
@@ -279,23 +299,42 @@
     setTimeout(updateSliderTooltip, 10);
     
 
-    // === 2. Form Submission Script (MODIFIED for Redirection) ===
+    // === 2. Form Submission Script (UPDATED) ===
     
-    // ⚠️ IMPORTANT: REPLACE THIS URL with your live Vercel domain!
-    // Example: https://mawarid-fintech-summit.vercel.app
-    const VERCEL_URL = "https://mawarid-fintech-summit-survey.vercel.app"; 
+    // ⬇️ *** PASTE YOUR GOOGLE APPS SCRIPT URL HERE *** ⬇️
+    const scriptURL = "https://script.google.com/macros/s/AKfycbz6381WqR8C6YIWt7fihWmdJdoKNPnqpSHCxyMLjEqAeuDlWIf9FwE-r7qyK9hClMb-/exec";
     
-    // Google Apps Script URL (Checked and appears correct for the script provided)
-    const scriptURL = "https://script.google.com/macros/s/AKfycbz6381WqR8C6YIWt7fihWmdJdoKNPnqpSHCxyMLjEqAeuDlWIf9FwE-r7qyK9hClMb-/exec"; 
+    // ⚠️ IMPORTANT: REPLACE THIS with your actual Vercel domain or just use a relative path if deploying to the root.
+    // Using a relative path (just '/thankyou.html') is generally safer for Vercel deployment.
+    const REDIRECT_URL = "thankyou.html"; 
     
     const form = document.getElementById('surveyForm');
+    const submitButton = document.getElementById('submitButton');
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const buttonText = document.getElementById('buttonText');
+
+    // Helper function to show loading state
+    function setLoading(isLoading) {
+      if (isLoading) {
+        submitButton.disabled = true;
+        loadingSpinner.classList.remove('d-none');
+        buttonText.textContent = "Submitting...";
+      } else {
+        submitButton.disabled = false;
+        loadingSpinner.classList.add('d-none');
+        buttonText.textContent = "Submit";
+      }
+    }
 
     form.addEventListener('submit', e => {
       e.preventDefault();
       
+      setLoading(true); // Start loading animation
+
       const formData = new FormData(form);
       const data = {};
 
+      // Collect all form data, handling multiple checkboxes correctly
       formData.forEach((value, key) => {
         if (data[key]) {
           if (!Array.isArray(data[key])) {
@@ -317,11 +356,12 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
       }).then(() => {
-        // ✨ SUCCESS HANDLER: Redirect to the Vercel thank you page
-        window.location.href = `${VERCEL_URL}/thankyou.html`; 
+        // Success: Redirect to the thank you page
+        window.location.href = REDIRECT_URL; 
       }).catch(err => {
         console.error('Error!', err.message);
-        alert('Submission failed. Check your Apps Script deployment permissions.'); 
+        setLoading(false); // Stop loading on error
+        alert('Submission failed. Please check your network connection and Apps Script deployment.'); 
       });
     });
   </script>
